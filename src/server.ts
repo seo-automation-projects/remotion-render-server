@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
-// Directory to store output video files
+// Directory to store output MP4 files
 const OUT_DIR = path.join("/tmp", "renders");
 if (!fs.existsSync(OUT_DIR)) {
   fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -22,7 +22,7 @@ app.use("/videos", express.static(OUT_DIR));
 
 let bundlePromise: Promise<string> | null = null;
 
-function getBundleLocation() {
+function getBundleLocation(): Promise<string> {
   if (!bundlePromise) {
     bundlePromise = bundle({
       entryPoint: path.resolve(__dirname, "./remotion/index.ts"),
@@ -31,7 +31,7 @@ function getBundleLocation() {
   return bundlePromise;
 }
 
-// Pre-bundle template on startup
+// Pre-bundle template on boot
 getBundleLocation()
   .then(() => console.log("✅ Remotion template pre-bundled successfully."))
   .catch((err) => console.error("❌ Bundling error:", err));
@@ -48,37 +48,36 @@ app.post("/render", async (req, res) => {
     }
 
     const bundleLocation = await getBundleLocation();
-    console.log("🎬 Initiating video render on headless Chromium...");
+    console.log("🎬 Initiating video render...");
 
+    const chromiumExecutable = process.env.CHROMIUM_PATH || undefined;
+
+    // 1. Select Composition
     const composition = await selectComposition({
       serveUrl: bundleLocation,
       id: "MainVideo",
       inputProps,
-      chromiumOptions: {
-        executablePath: process.env.CHROMIUM_PATH || undefined,
-        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-      },
+      chromiumExecutable,
     });
 
     const videoFileName = `video-${Date.now()}.mp4`;
     const outputPath = path.join(OUT_DIR, videoFileName);
 
+    // 2. Render Media to Disk
     await renderMedia({
       composition,
       serveUrl: bundleLocation,
       codec: "h264",
       outputLocation: outputPath,
       inputProps,
+      chromiumExecutable,
       chromiumOptions: {
-        executablePath: process.env.CHROMIUM_PATH || undefined,
         enableMultiProcessOnLinux: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
       },
     });
 
     console.log(`✅ Render completed: ${videoFileName}`);
 
-    // Compute public accessible URL
     const host = req.get("x-forwarded-host") || req.get("host");
     const protocol = req.get("x-forwarded-proto") || req.protocol;
     const publicUrl = `${protocol}://${host}/videos/${videoFileName}`;
@@ -94,5 +93,5 @@ app.post("/render", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Remotion Render Worker running on port ${PORT}`);
+  console.log(`🚀 Remotion Render Worker listening on port ${PORT}`);
 });

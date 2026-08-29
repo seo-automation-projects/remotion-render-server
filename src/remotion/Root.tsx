@@ -1,13 +1,13 @@
 import React from "react";
 import { Composition } from "remotion";
-import { MainVideo } from "./Composition";
+import { MainVideo, MainVideoProps } from "./Composition";
 
 export const RemotionRoot: React.FC = () => {
   return (
-    <Composition
+    <Composition<MainVideoProps>
       id="MainVideo"
       component={MainVideo}
-      durationInFrames={1800} // 60s max @ 30fps
+      durationInFrames={1800} // 60s @ 30fps
       fps={30}
       width={1080}
       height={1920}

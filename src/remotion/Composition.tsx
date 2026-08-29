@@ -12,13 +12,16 @@ export interface MainVideoProps {
   audioBase64: string;
 }
 
-export const MainVideo: React.FC<MainVideoProps> = ({ scenes = [], audioBase64 }) => {
+export const MainVideo: React.FC<MainVideoProps> = ({
+  scenes = [],
+  audioBase64 = "",
+}) => {
   let accumulatedFrames = 0;
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000000" }}>
       {/* Voiceover Track */}
-      {audioBase64 && <Audio src={audioBase64} />}
+      {audioBase64 ? <Audio src={audioBase64} /> : null}
 
       {/* Sequential Scenes */}
       {scenes.map((scene, index) => {
@@ -26,16 +29,20 @@ export const MainVideo: React.FC<MainVideoProps> = ({ scenes = [], audioBase64 }
         accumulatedFrames += scene.durationInFrames;
 
         return (
-          <Sequence key={index} from={startFrame} durationInFrames={scene.durationInFrames}>
+          <Sequence
+            key={index}
+            from={startFrame}
+            durationInFrames={scene.durationInFrames}
+          >
             {/* Background Video */}
-            {scene.videoUrl && (
+            {scene.videoUrl ? (
               <Video
                 src={scene.videoUrl}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
-            )}
+            ) : null}
 
-            {/* Dark Vignette Overlay for Contrast */}
+            {/* Dark Vignette Overlay for Readability */}
             <AbsoluteFill style={{ backgroundColor: "rgba(0,0,0,0.35)" }} />
 
             {/* Subtitle / Hook Overlay */}
