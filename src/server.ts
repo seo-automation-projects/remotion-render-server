@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
-// Directory to store output MP4 files
+// Directory to store output video files
 const OUT_DIR = path.join("/tmp", "renders");
 if (!fs.existsSync(OUT_DIR)) {
   fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -31,7 +31,7 @@ function getBundleLocation(): Promise<string> {
   return bundlePromise;
 }
 
-// Pre-bundle template on boot
+// Pre-bundle template on server start
 getBundleLocation()
   .then(() => console.log("✅ Remotion template pre-bundled successfully."))
   .catch((err) => console.error("❌ Bundling error:", err));
@@ -48,11 +48,11 @@ app.post("/render", async (req, res) => {
     }
 
     const bundleLocation = await getBundleLocation();
-    console.log("🎬 Initiating video render...");
+    console.log("🎬 Initiating video render on headless Chromium...");
 
     const chromiumExecutable = process.env.CHROMIUM_PATH || undefined;
 
-    // 1. Select Composition
+    // 1. Select Composition (chromiumExecutable is at root level)
     const composition = await selectComposition({
       serveUrl: bundleLocation,
       id: "MainVideo",
@@ -63,7 +63,7 @@ app.post("/render", async (req, res) => {
     const videoFileName = `video-${Date.now()}.mp4`;
     const outputPath = path.join(OUT_DIR, videoFileName);
 
-    // 2. Render Media to Disk
+    // 2. Render Media (chromiumOptions only contains valid renderer flags)
     await renderMedia({
       composition,
       serveUrl: bundleLocation,
@@ -93,5 +93,5 @@ app.post("/render", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Remotion Render Worker listening on port ${PORT}`);
+  console.log(`🚀 Remotion Render Worker running on port ${PORT}`);
 });
